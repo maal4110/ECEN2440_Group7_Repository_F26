@@ -1,0 +1,47 @@
+#   Pico pin GP13   -> AIN2
+#   Pico pin GP12   -> AIN1
+#   any Pico GND    -> GND
+
+import math, time
+import machine
+# load the MicroPython pulse-width-modulation module for driving hardware
+from machine import PWM
+
+from machine import Pin
+
+time.sleep(1) # Wait for USB to become ready
+
+
+pwm_rate = 2000
+ain1_ph = Pin(12, Pin.OUT)
+ain2_en = PWM(13, freq = pwm_rate, duty_u16 = 0)
+bin1_ph = Pin(14, Pin.OUT)
+bin2_en = PWM(15, freq = pwm_rate, duty_u16 = 0)
+
+pwm = min(max(int(2**16 * abs(1)), 0), 65535)
+
+while True:
+    print("Motor A - Foward") # Print to REPL
+    print("Motor B - Foward") # Print to REPL
+    ain1_ph.low()
+    ain2_en.duty_u16(pwm)
+    bin1_ph.low()
+    bin2_en.duty_u16(pwm)
+    time.sleep(2)
+    print("Motor A - Off")
+    print("Motor B - Off")
+    ain2_en.duty_u16(0)
+    bin2_en.duty_u16(0)
+    time.sleep(1)
+    print("Motor A - Backward") # Print to REPL
+    print("Motor B - Backward") # Print to REPL
+    ain1_ph.high()
+    bin1_ph.high()
+    ain2_en.duty_u16(pwm)
+    bin2_en.duty_u16(pwm)
+    time.sleep(2)
+    print("Motor A - Off")
+    print("Motor B - Off")
+    ain2_en.duty_u16(0)
+    bin2_en.duty_u16(0)
+    time.sleep(1)
