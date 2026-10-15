@@ -1,0 +1,158 @@
+from machine import Pin
+from utime import sleep, ticks_ms, ticks_diff
+from ir_rx.nec import NEC_8
+from ir_rx.print_error import print_error
+
+# Mode switch
+switch = Pin(15, Pin.IN, Pin.PULL_UP)
+
+# RF inputs
+pinA = Pin(5, Pin.IN)
+pinB = Pin(4, Pin.IN)
+pinC = Pin(3, Pin.IN)
+pinD = Pin(2, Pin.IN)
+
+# LEDs
+ledA = Pin(18, Pin.OUT)
+ledB = Pin(19, Pin.OUT)
+ledC = Pin(20, Pin.OUT)
+ledD = Pin(21, Pin.OUT)
+
+# IR receiver - using your working GP17 setup
+ir_pin = Pin(16, Pin.IN, Pin.PULL_UP)
+
+# IR callback
+def ir_callback(data, addr, _):
+    if switch.value() == 1 and data >= 0:
+        print(f"Received NEC command! Data: 0x{data:02X}, Addr: 0x{addr:02X}")
+
+ir_receiver = NEC_8(ir_pin, callback=ir_callback)
+ir_receiver.error_function(print_error)
+
+# Previous RF states
+lastA = pinA.value()
+lastB = pinB.value()
+lastC = pinC.value()
+lastD = pinD.value()
+
+# LED timers
+timeA = 0
+timeB = 0
+timeC = 0
+timeD = 0
+
+# LED active states
+activeA = False
+activeB = False
+activeC = False
+activeD = False
+
+last_mode = switch.value()
+
+if last_mode == 1:
+    print("IR Mode Selected")
+else:
+    print("RF Mode Selected")
+
+while True:
+    try:
+        mode = switch.value()
+        now = ticks_ms()
+
+        # Detect mode changes
+        if mode != last_mode:
+            ledA.off()
+            ledB.off()
+            ledC.off()
+            ledD.off()
+
+            activeA = False
+            activeB = False
+            activeC = False
+            activeD = False
+
+            lastA = pinA.value()
+            lastB = pinB.value()
+            lastC = pinC.value()
+            lastD = pinD.value()
+
+            if mode == 1:
+                print("IR Mode Selected")
+            else:
+                print("RF Mode Selected")
+
+            last_mode = mode
+
+        # IR MODE
+        if mode == 1:
+            # IR commands are received through ir_callback
+            # RF inputs are ignored
+            pass
+
+        # RF MODE
+        else:
+            a = pinA.value()
+            b = pinB.value()
+            c = pinC.value()
+            d = pinD.value()
+
+            if a == 1 and lastA == 0:
+                print("RF Button A")
+                ledA.on()
+                timeA = now
+                activeA = True
+
+            if b == 1 and lastB == 0:
+                print("RF Button B")
+                ledB.on()
+                timeB = now
+                activeB = True
+
+            if c == 1 and lastC == 0:
+                print("RF Button C")
+                ledC.on()
+                timeC = now
+                activeC = True
+
+            if d == 1 and lastD == 0:
+                print("RF Button D")
+                ledD.on()
+                timeD = now
+                activeD = True
+
+            lastA = a
+            lastB = b
+            lastC = c
+            lastD = d
+
+        # Turn LEDs off after 1 second
+        if activeA and ticks_diff(now, timeA) >= 1000:
+            ledA.off()
+            activeA = False
+
+        if activeB and ticks_diff(now, timeB) >= 1000:
+            ledB.off()
+            activeB = False
+
+        if activeC and ticks_diff(now, timeC) >= 1000:
+            ledC.off()
+            activeC = False
+
+        if activeD and ticks_diff(now, timeD) >= 1000:
+            ledD.off()
+            activeD = False
+
+        sleep(0.02)
+
+    except KeyboardInterrupt:
+        break
+
+# Cleanup
+ir_receiver.close()
+
+ledA.off()
+ledB.off()
+ledC.off()
+ledD.off()
+
+print("Finished.")
