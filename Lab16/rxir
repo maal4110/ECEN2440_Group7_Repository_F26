@@ -1,0 +1,140 @@
+from machine import Pin
+from utime import sleep, ticks_ms, ticks_diff
+from ir_rx.nec import NEC_8
+from ir_rx.print_error import print_error
+
+# IR callback
+def ir_callback(data, addr, _):
+    if switch.value() == 1 and data >= 0:
+        print(f"IR Received! Data: 0x{data:02X}, Addr: 0x{addr:02X}")
+
+# Receiver selection switch
+switch = Pin(15, Pin.IN, Pin.PULL_UP)
+
+# IR receiver
+ir_pin = Pin(17, Pin.IN, Pin.PULL_UP)
+ir_receiver = NEC_8(ir_pin, callback=ir_callback)
+ir_receiver.error_function(print_error)
+
+# RF receiver
+rf_pin = Pin(16, Pin.IN)
+
+# Buttons
+pinA = Pin(5, Pin.IN)
+pinB = Pin(4, Pin.IN)
+pinC = Pin(3, Pin.IN)
+pinD = Pin(2, Pin.IN)
+
+# LEDs
+ledA = Pin(18, Pin.OUT)
+ledB = Pin(19, Pin.OUT)
+ledC = Pin(20, Pin.OUT)
+ledD = Pin(21, Pin.OUT)
+
+lastA = 0
+lastB = 0
+lastC = 0
+lastD = 0
+
+timeA = 0
+timeB = 0
+timeC = 0
+timeD = 0
+
+last_rf = 0
+last_mode = switch.value()
+
+if last_mode == 1:
+    print("IR Mode Selected")
+else:
+    print("RF Mode Selected")
+
+while True:
+    try:
+        a = pinA.value()
+        b = pinB.value()
+        c = pinC.value()
+        d = pinD.value()
+
+        now = ticks_ms()
+
+        # Button A
+        if a == 1 and lastA == 0:
+            print("Button A Pressed")
+            ledA.on()
+            timeA = now
+
+        # Button B
+        if b == 1 and lastB == 0:
+            print("Button B Pressed")
+            ledB.on()
+            timeB = now
+
+        # Button C
+        if c == 1 and lastC == 0:
+            print("Button C Pressed")
+            ledC.on()
+            timeC = now
+
+        # Button D
+        if d == 1 and lastD == 0:
+            print("Button D Pressed")
+            ledD.on()
+            timeD = now
+
+        # Turn LEDs off after 1 second
+        if ledA.value() == 1 and ticks_diff(now, timeA) >= 1000:
+            ledA.off()
+
+        if ledB.value() == 1 and ticks_diff(now, timeB) >= 1000:
+            ledB.off()
+
+        if ledC.value() == 1 and ticks_diff(now, timeC) >= 1000:
+            ledC.off()
+
+        if ledD.value() == 1 and ticks_diff(now, timeD) >= 1000:
+            ledD.off()
+
+        # Update previous button states
+        lastA = a
+        lastB = b
+        lastC = c
+        lastD = d
+
+        # Check IR / RF selection switch
+        mode = switch.value()
+
+        if mode != last_mode:
+            if mode == 1:
+                print("IR Mode Selected")
+            else:
+                print("RF Mode Selected")
+
+            last_mode = mode
+
+        # RF Mode
+        if mode == 0:
+            rf = rf_pin.value()
+
+            if rf == 1 and last_rf == 0:
+                print("RF Signal Detected")
+
+            last_rf = rf
+
+        else:
+            last_rf = rf_pin.value()
+
+        sleep(0.02)
+
+    except KeyboardInterrupt:
+        break
+
+# Turn everything off
+ledA.off()
+ledB.off()
+ledC.off()
+ledD.off()
+
+ir_receiver.close()
+
+print("Finished.")
