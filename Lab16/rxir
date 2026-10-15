@@ -3,21 +3,21 @@ from utime import sleep, ticks_ms, ticks_diff
 from ir_rx.nec import NEC_8
 from ir_rx.print_error import print_error
 
-# IR callback
+# Mode switch
+switch = Pin(15, Pin.IN, Pin.PULL_UP)
+
+# IR receiver
+ir_pin = Pin(16, Pin.IN, Pin.PULL_UP)
+
 def ir_callback(data, addr, _):
     if switch.value() == 1 and data >= 0:
         print(f"IR Received! Data: 0x{data:02X}, Addr: 0x{addr:02X}")
 
-# Receiver selection switch
-switch = Pin(15, Pin.IN, Pin.PULL_UP)
-
-# IR receiver
-ir_pin = Pin(17, Pin.IN, Pin.PULL_UP)
 ir_receiver = NEC_8(ir_pin, callback=ir_callback)
 ir_receiver.error_function(print_error)
 
 # RF receiver
-rf_pin = Pin(16, Pin.IN)
+rf_pin = Pin(17, Pin.IN)
 
 # Buttons
 pinA = Pin(5, Pin.IN)
@@ -95,13 +95,12 @@ while True:
         if ledD.value() == 1 and ticks_diff(now, timeD) >= 1000:
             ledD.off()
 
-        # Update previous button states
         lastA = a
         lastB = b
         lastC = c
         lastD = d
 
-        # Check IR / RF selection switch
+        # Check receiver mode
         mode = switch.value()
 
         if mode != last_mode:
@@ -112,7 +111,7 @@ while True:
 
             last_mode = mode
 
-        # RF Mode
+        # RF Mode - ignore RF signals in IR mode
         if mode == 0:
             rf = rf_pin.value()
 
@@ -129,7 +128,6 @@ while True:
     except KeyboardInterrupt:
         break
 
-# Turn everything off
 ledA.off()
 ledB.off()
 ledC.off()
