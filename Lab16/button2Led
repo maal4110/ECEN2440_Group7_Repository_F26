@@ -1,0 +1,65 @@
+from machine import Pin
+from utime import sleep
+
+pinA = Pin(5, Pin.IN)
+pinB = Pin(4, Pin.IN)
+pinC = Pin(3, Pin.IN)
+pinD = Pin(2, Pin.IN)
+
+ledA = Pin(18, Pin.OUT)
+ledB = Pin(19, Pin.OUT)
+ledC = Pin(20, Pin.OUT)
+ledD = Pin(21, Pin.OUT)
+
+lastA = 0
+lastB = 0
+lastC = 0
+lastD = 0
+
+while True:
+    try:
+        a = pinA.value()
+        b = pinB.value()
+        c = pinC.value()
+        d = pinD.value()
+
+        if a == 1 and lastA == 0:
+            print("Button A Pressed")
+            ledA.on()
+            sleep(1)
+            ledA.off()
+
+        if b == 1 and lastB == 0:
+            print("Button B Pressed")
+            ledB.on()
+            sleep(1)
+            ledB.off()
+
+        if c == 1 and lastC == 0:
+            print("Button C Pressed")
+            ledC.on()
+            sleep(1)
+            ledC.off()
+
+        if d == 1 and lastD == 0:
+            print("Button D Pressed")
+            ledD.on()
+            sleep(1)
+            ledD.off()
+
+        lastA = pinA.value()
+        lastB = pinB.value()
+        lastC = pinC.value()
+        lastD = pinD.value()
+
+        sleep(0.02)
+
+    except KeyboardInterrupt:
+        break
+
+ledA.off()
+ledB.off()
+ledC.off()
+ledD.off()
+
+print("Finished.")
