@@ -1,53 +1,47 @@
-# Test 9 - IR Transmitter Code integrated with the Joystick (Serial Monitor)
-# Combines test6TX (IR transmitter) + analog joystick.
-#   Joystick up    -> FORWARD  (0x01)
-#   Joystick down  -> BACKWARD (0x02)
-#   Joystick left  -> LEFT     (0x03)
-#   Joystick right -> RIGHT    (0x04)
-#   Released       -> STOP     (0x00)
-#
-# Joystick wiring: VCC -> 3V3 (not VBUS), GND -> GND,
-#                  VRx -> GP27 (ADC1), VRy -> GP26 (ADC0)
-
 import time
-from machine import Pin, ADC
+from machine import Pin, I2C
 from ir_tx.nec import NEC
+import seesaw
 
-#IR transmitter - test 6
+# IR transmitter
 tx_pin = Pin(17, Pin.OUT, value=0)
 device_addr = 0x01
 transmitter = NEC(tx_pin)
 
-#joystick
-joy_x = ADC(Pin(27))
-joy_y = ADC(Pin(26))
+# Adafruit I2C gamepad
+i2c = I2C(1, sda=Pin(26), scl=Pin(27), freq=100000)
+seesaw_device = seesaw.Seesaw(i2c, addr=0x50)
 
-# read_u16() gives 0..65535, about 32768 when the stick is centered.
-# Outside these limits counts as pushed in that direction.
-LOW = 16000
-HIGH = 49000
+# Seesaw internal joystick pins (not Pico GPIO)
+JOYSTICK_X_PIN = 14
+JOYSTICK_Y_PIN = 15
 
-# commands
+CENTER_X = 511
+CENTER_Y = 497
+THRESHOLD = 50
+
+# Commands
 STOP     = 0x00
 FORWARD  = 0x01
 BACKWARD = 0x02
-LEFT     = 0x03
-RIGHT    = 0x04
+LEFT     = 0x04
+RIGHT    = 0x03
+
 NAMES = {STOP: "STOP", FORWARD: "FORWARD", BACKWARD: "BACKWARD",
          LEFT: "LEFT", RIGHT: "RIGHT"}
 
 
 def read_joystick():
-    x = joy_x.read_u16()
-    y = joy_y.read_u16()
-    # If a direction comes out backwards, swap that pair below
-    if y > HIGH:
+    x = seesaw_device.analog_read(JOYSTICK_X_PIN)
+    y = seesaw_device.analog_read(JOYSTICK_Y_PIN)
+
+    if y < CENTER_Y - THRESHOLD:
         return FORWARD
-    if y < LOW:
+    if y > CENTER_Y + THRESHOLD:
         return BACKWARD
-    if x < LOW:
+    if x < CENTER_X - THRESHOLD:
         return LEFT
-    if x > HIGH:
+    if x > CENTER_X + THRESHOLD:
         return RIGHT
     return STOP
 
@@ -55,7 +49,7 @@ def read_joystick():
 def send(command):
     transmitter.transmit(device_addr, command)
     print("COMMAND", hex(command), NAMES[command], "TRANSMITTED.")
-    time.sleep_ms(120)   # an NEC frame takes ~68 ms; let it finish
+    time.sleep_ms(120)
 
 
 if __name__ == "__main__":
@@ -64,10 +58,9 @@ if __name__ == "__main__":
     while True:
         command = read_joystick()
         if command != STOP:
-            send(command)            # keep resending while the stick is held
+            send(command)
         elif last != STOP:
-            for _ in range(3):       # stick released: send STOP a few times
-                send(STOP)           # so a single missed frame can't leave
-                                     # the robot driving
+            for _ in range(3):
+                send(STOP)
         last = command
         time.sleep_ms(30)
