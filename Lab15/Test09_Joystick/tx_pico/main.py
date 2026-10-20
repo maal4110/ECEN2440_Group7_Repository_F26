@@ -3,16 +3,14 @@ from machine import Pin, I2C
 from ir_tx.nec import NEC
 import seesaw
 
-# IR transmitter
 tx_pin = Pin(17, Pin.OUT, value=0)
 device_addr = 0x01
 transmitter = NEC(tx_pin)
 
-# Adafruit I2C gamepad
+
 i2c = I2C(1, sda=Pin(26), scl=Pin(27), freq=100000)
 seesaw_device = seesaw.Seesaw(i2c, addr=0x50)
 
-# Seesaw internal joystick pins (not Pico GPIO)
 JOYSTICK_X_PIN = 14
 JOYSTICK_Y_PIN = 15
 
@@ -20,7 +18,7 @@ CENTER_X = 511
 CENTER_Y = 497
 THRESHOLD = 50
 
-# Commands
+
 STOP     = 0x00
 FORWARD  = 0x01
 BACKWARD = 0x02
